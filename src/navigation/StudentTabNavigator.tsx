@@ -6,6 +6,7 @@ import DashboardScreen from '../screens/DashboardScreen';
 import UploadCertificateScreen from '../screens/UploadCertificateScreen';
 import CertificatesScreen from '../screens/CertificatesScreen';
 import {useTheme} from '../theme';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const Tab = createBottomTabNavigator();
 
@@ -13,11 +14,11 @@ function TabBar({state, navigation}: any) {
   const insets = useSafeAreaInsets();
   const {colors} = useTheme();
 
-  const icons: Record<string, string> = {
-    Dashboard: '🏠',
-    Upload: '📤',
-    Certificates: '📋',
-  };
+const icons: Record<string, string> = {
+  Dashboard: 'view-dashboard-outline',
+  Upload: 'cloud-upload-outline',
+  Certificates: 'certificate-outline',
+};
 
   return (
     <View
@@ -37,9 +38,11 @@ function TabBar({state, navigation}: any) {
             style={styles.tabItem}
             onPress={() => navigation.navigate(route.name)}
             accessibilityRole="button">
-            <Text style={[styles.tabIcon, isFocused && {opacity: 1}]}>
-              {icons[route.name] || '•'}
-            </Text>
+            <Icon
+              name={icons[route.name] || 'circle-outline'}
+              size={24}
+              color={isFocused ? colors.primary : colors.textMuted}
+            />
             <Text
               style={[
                 styles.tabLabel,
