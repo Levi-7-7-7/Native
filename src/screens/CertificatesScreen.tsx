@@ -8,6 +8,7 @@ import axiosInstance from '../api/axiosInstance';
 import {useAuth} from '../context/AuthContext';
 import {calcCappedPoints, passThreshold} from '../utils/calcPoints';
 import {useTheme} from '../theme';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const FILTERS = ['all', 'approved', 'pending', 'rejected'];
 
@@ -74,12 +75,16 @@ export default function CertificatesScreen() {
     }
   };
 
-  const getStatusEmoji = (status: string) => {
+  const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'approved': return '✅';
-      case 'pending':  return '⏳';
-      case 'rejected': return '❌';
-      default:         return '📄';
+      case 'approved':
+        return 'check-circle-outline';
+      case 'pending':
+        return 'clock-outline';
+      case 'rejected':
+        return 'close-circle-outline';
+      default:
+        return 'file-document-outline';
     }
   };
 
@@ -221,7 +226,17 @@ export default function CertificatesScreen() {
                   <Text style={[styles.certName, {color: colors.text}]} numberOfLines={2}>
                     {cert.subcategory || 'Certificate'}
                   </Text>
-                  <Text style={styles.certEmoji}>{getStatusEmoji(cert.status)}</Text>
+                    <MaterialCommunityIcons
+                      name={
+                        cert.status?.toLowerCase() === 'approved'
+                          ? 'check-circle-outline'
+                          : cert.status?.toLowerCase() === 'pending'
+                          ? 'clock-outline'
+                          : 'close-circle-outline'
+                      }
+                      size={22}
+                      color="#555"
+                    />
                 </View>
 
                 {/* Category badge */}
@@ -260,9 +275,16 @@ export default function CertificatesScreen() {
                 {/* Rejection reason */}
                 {cert.status?.toLowerCase() === 'rejected' && (
                   <View style={[styles.rejectedBox, {backgroundColor: colors.cardDanger}]}>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                    <MaterialCommunityIcons
+                      name="close-circle-outline"
+                      size={18}
+                      color={colors.dangerText}
+                    />
                     <Text style={[styles.rejectedTitle, {color: colors.dangerText}]}>
-                      ❌ Certificate Rejected
+                      Certificate Rejected
                     </Text>
+                  </View>
                     <Text style={[styles.rejectedReason, {color: colors.dangerSub}]}>
                       {cert.rejectionReason || 'No reason provided. Please contact your tutor.'}
                     </Text>
@@ -286,9 +308,12 @@ export default function CertificatesScreen() {
                       {viewingId === cert._id ? (
                         <ActivityIndicator size="small" color={colors.primary} />
                       ) : (
+                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                        <MaterialCommunityIcons name="eye-outline" size={16} color={colors.primary} />
                         <Text style={[styles.btnViewText, {color: colors.primary}]}>
-                          👁 View / Download
+                          View
                         </Text>
+                      </View>
                       )}
                     </TouchableOpacity>
                   )}
@@ -301,9 +326,12 @@ export default function CertificatesScreen() {
                       ]}
                       onPress={() => handleCancelCert(cert)}
                       disabled={deletingId === cert._id}>
-                      <Text style={[styles.btnCancelText, {color: colors.dangerText}]}>
-                        {deletingId === cert._id ? 'Cancelling…' : '🗑 Cancel'}
-                      </Text>
+                      <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                        <MaterialCommunityIcons name="delete-outline" size={16} color={colors.dangerText} />
+                        <Text style={[styles.btnCancelText, {color: colors.dangerText, marginLeft: 6}]}>
+                          Cancel
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   )}
                 </View>

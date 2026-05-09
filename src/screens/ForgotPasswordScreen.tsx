@@ -4,6 +4,7 @@ import {
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import axiosInstance from '../api/axiosInstance';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function ForgotPasswordScreen({navigation}: any) {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function ForgotPasswordScreen({navigation}: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.emoji}>🔒</Text>
+          <MaterialCommunityIcons name="lock-outline" size={48} color="#1e3a8a" />
           <Text style={styles.title}>Forgot Password</Text>
           <Text style={styles.subtitle}>Enter your registered email to receive a reset link</Text>
         </View>

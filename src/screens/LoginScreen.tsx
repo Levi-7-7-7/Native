@@ -6,6 +6,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance from '../api/axiosInstance';
 import {useAuth} from '../context/AuthContext';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function LoginScreen({navigation}: any) {
   const {setUser, setRole} = useAuth();
@@ -65,7 +66,7 @@ export default function LoginScreen({navigation}: any) {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.emoji}>🎓</Text>
+          <MaterialCommunityIcons name="school-outline" size={48} color="#1e3a8a" />
           <Text style={styles.title}>Activity Points</Text>
           <Text style={styles.subtitle}>Management System</Text>
         </View>
@@ -103,7 +104,13 @@ export default function LoginScreen({navigation}: any) {
                 <TouchableOpacity
                   style={styles.eyeBtn}
                   onPress={() => setShowPassword(!showPassword)}>
-                  <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <MaterialCommunityIcons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={22}
+                      color="#6b7280"
+                    />
+                  </TouchableOpacity>
                 </TouchableOpacity>
               </View>
             </>
