@@ -1,142 +1,169 @@
-# ActivityPointsNative — Activity Points Management System (Mobile)
+# APMS Mobile — Activity Points Management System
 
-A React Native mobile app mirroring the web app (`activity-points-frontend`) for **student** users.
-
-## Features
-- Student Login (register number + password, first-time OTP flow)
-- Verify OTP — set password, batch, branch, lateral-entry on first login  
-- Forgot Password — email-based reset
-- Dashboard — points card, progress bar, pass badge, recent activities
-- Upload Certificate — category/subcategory/level/prize form + file picker
-- My Certificates — filter by status, view, cancel pending
-
-## Quick Setup
-
-**1. Set your backend URL** in `src/api/axiosInstance.ts`:
-```ts
-export const BASE_URL = 'https://your-backend.onrender.com/api';
-```
-
-**2. Install deps:**
-```bash
-npm install
-cd ios && pod install && cd ..  # iOS only
-```
-
-**3. Run:**
-```bash
-npx react-native run-android   # Android
-npx react-native run-ios       # iOS
-```
-
-## New Dependencies Added
-- `axios` — HTTP client
-- `@react-native-async-storage/async-storage` — replaces localStorage
-- `@react-navigation/native` + `native-stack` + `bottom-tabs`
-- `react-native-screens` — navigation performance
-- `react-native-image-picker` — certificate file picker
-
-## Permissions Required
-**Android** (`AndroidManifest.xml`): `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE`  
-**iOS** (`Info.plist`): `NSPhotoLibraryUsageDescription`
+The official Android companion app for APMS, built with React Native. Students can log in, track their activity points, upload certificates, and view approvals — all from their phone.
 
 ---
 
-Original React Native README below:
+## 📱 App Info
 
+| Field | Value |
+|---|---|
+| App Name | APMS |
+| Package | `com.activitypointsnative` |
+| Version | 1.0 (build 1) |
+| Platform | Android (iOS scaffold included) |
+| Min SDK | API 24 (Android 7.0) |
+| Target SDK | API 36 (Android 16) |
+| React Native | 0.85.3 |
 
-# Getting Started
+---
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## ✨ Features
 
-## Step 1: Start Metro
+- **OTP Login** — Email-based login with OTP verification
+- **Forgot Password** — Reset password via email OTP
+- **Dashboard** — Live activity points summary per category
+- **Upload Certificate** — Pick images from camera or gallery and submit with category, date, and description
+- **Certificates** — View all submitted certificates with approval status
+- **Animated Splash Screen** — Custom icon scale + fade exit animation (Android 12+)
+- **Persistent Auth** — JWT stored in AsyncStorage; session restores on relaunch
+- **Auto Logout** — Clears session automatically on 401 responses
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+---
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## 🛠️ Tech Stack
 
-```sh
-# Using npm
+| Package | Version | Purpose |
+|---|---|---|
+| React Native | 0.85.3 | Core framework |
+| React | 19.2.3 | UI rendering |
+| TypeScript | ^5.8.3 | Type safety |
+| React Navigation | ^7.x | Stack + bottom tab navigation |
+| Axios | ^1.16.0 | API calls with interceptors |
+| AsyncStorage | ^1.23.1 | Token & session persistence |
+| react-native-image-picker | ^8.2.1 | Camera & gallery access |
+| react-native-blob-util | ^0.19.11 | File download & handling |
+| react-native-vector-icons | ^10.3.0 | MaterialCommunityIcons tab bar |
+| react-native-safe-area-context | ^5.7.0 | Notch / gesture bar handling |
+| react-native-screens | ^4.24.0 | Native navigation optimization |
+| datetimepicker | ^8.3.0 | Date selection on uploads |
+| androidx.core:core-splashscreen | 1.0.1 | Native Android splash screen |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js >= 22.11.0
+- JDK 17+
+- Android Studio with Android SDK (API 36)
+- A physical Android device or emulator (API 24+)
+
+### Install dependencies
+
+```bash
+npm install
+```
+
+### Configure the API URL
+
+Open `src/api/axiosInstance.ts` and update `BASE_URL` to point to your backend:
+
+```ts
+export const BASE_URL = 'https://your-backend-url.com/api';
+```
+
+### Run in development
+
+```bash
+# Start Metro bundler
 npm start
 
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
+# In a separate terminal, run on Android
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 📦 Build Release APK
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+cd android
+gradlew assembleRelease
 ```
 
-Then, and every time you update your native dependencies, run:
+Output: `android/app/build/outputs/apk/release/app-release.apk`
 
-```sh
-bundle exec pod install
+### Common build issues (Windows)
+
+If you hit a `classes.dex` file lock error:
+
+```bash
+gradlew --stop
+rd /s /q app\build
+gradlew assembleRelease
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Also make sure Android Studio is closed and antivirus real-time scanning is paused during the build.
 
-```sh
-# Using npm
-npm run ios
+---
 
-# OR using Yarn
-yarn ios
+## 📁 Project Structure
+
+```
+src/
+├── api/
+│   └── axiosInstance.ts        # Axios client with auth interceptors
+├── context/
+│   └── AuthContext.tsx         # Global auth state, login/logout
+├── navigation/
+│   ├── RootNavigator.tsx       # Auth-aware root stack
+│   └── StudentTabNavigator.tsx # Bottom tab bar (Dashboard / Upload / Certificates)
+├── screens/
+│   ├── LoginScreen.tsx
+│   ├── VerifyOtpScreen.tsx
+│   ├── ForgotPasswordScreen.tsx
+│   ├── DashboardScreen.tsx
+│   ├── UploadCertificateScreen.tsx
+│   └── CertificatesScreen.tsx
+├── theme/
+│   └── index.ts                # Colors, typography, shared tokens
+└── utils/
+    └── calcPoints.ts           # SBTE Kerala points calculation (client-side)
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 🔐 Auth Flow
 
-## Step 3: Modify your app
+```
+App launch
+  └─ AsyncStorage has token + role=student?
+       ├─ Yes → verify via GET /students/me → go to StudentTabNavigator
+       └─ No  → go to Login → VerifyOtp → StudentTabNavigator
+```
 
-Now that you have successfully run the app, let's make changes!
+On 401 response, the Axios interceptor automatically clears all stored tokens and the user is returned to the login screen.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+---
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## 🔑 Permissions
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+| Permission | Reason |
+|---|---|
+| `INTERNET` | API communication |
+| Camera | Certificate photo capture |
+| Read Storage | Certificate image selection from gallery |
 
-## Congratulations! :tada:
+---
 
-You've successfully run and modified your React Native App. :partying_face:
+## 🔗 Related
 
-### Now what?
+This app connects to the **APMS Backend** — see [`APMSV1-main`](../APMSV1-main) for backend setup instructions and API documentation.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+---
 
-# Troubleshooting
+## 📄 License
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Internal use only.
