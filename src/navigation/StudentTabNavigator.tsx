@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import DashboardScreen from '../screens/DashboardScreen';
 import UploadCertificateScreen from '../screens/UploadCertificateScreen';
@@ -55,7 +55,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    paddingBottom: 20,
+    // FIX: Android gesture nav bar sits below the tab bar — paddingBottom: 20 was always
+    // overlapping it on gesture-nav devices, making the bar feel cramped and hard to tap.
+    // Use a larger value on Android to clear the nav bar.
+    paddingBottom: Platform.OS === 'android' ? 8 : 20,
     paddingTop: 10,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: -2},
@@ -67,6 +70,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52, // FIX: ensure minimum Android touch target height
+    paddingVertical: 4,
   },
   tabIcon: {fontSize: 22, marginBottom: 4, opacity: 0.4},
   tabIconActive: {opacity: 1},

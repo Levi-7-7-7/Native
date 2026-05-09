@@ -1,7 +1,8 @@
 import React, {useState, useEffect} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform,
+  ScrollView, ActivityIndicator, Alert, Platform, Modal,
+  FlatList, SafeAreaView, StatusBar,
 } from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import axiosInstance from '../api/axiosInstance';
@@ -21,6 +22,43 @@ function buildSearchIndex(categories: any[]) {
     });
   });
   return items;
+}
+
+// ── Modal-based dropdown: renders above everything, scrollable, no clipping ──
+function DropdownModal({
+  visible, title, items, selectedValue, onSelect, onClose,
+}: {
+  visible: boolean;
+  title: string;
+  items: {label: string; value: string}[];
+  selectedValue: string;
+  onSelect: (v: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={dm.overlay} activeOpacity={1} onPress={onClose} />
+      <View style={dm.sheet}>
+        <Text style={dm.sheetTitle}>{title}</Text>
+        <FlatList
+          data={items}
+          keyExtractor={i => i.value}
+          renderItem={({item}) => (
+            <TouchableOpacity
+              style={[dm.item, item.value === selectedValue && dm.itemActive]}
+              onPress={() => { onSelect(item.value); onClose(); }}>
+              <Text style={[dm.itemText, item.value === selectedValue && dm.itemTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+        <TouchableOpacity style={dm.cancelBtn} onPress={onClose}>
+          <Text style={dm.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
 }
 
 export default function UploadCertificateScreen({navigation}: any) {
@@ -46,11 +84,11 @@ export default function UploadCertificateScreen({navigation}: any) {
   const [isOthers, setIsOthers] = useState(false);
   const [othersDescription, setOthersDescription] = useState('');
 
-  // Category/subcategory dropdowns
-  const [catOpen, setCatOpen] = useState(false);
-  const [subOpen, setSubOpen] = useState(false);
-  const [levelOpen, setLevelOpen] = useState(false);
-  const [prizeOpen, setPrizeOpen] = useState(false);
+  // Category/subcategory dropdowns — now Modal-based so they don't block scroll
+  const [catModalOpen, setCatModalOpen] = useState(false);
+  const [subModalOpen, setSubModalOpen] = useState(false);
+  const [levelModalOpen, setLevelModalOpen] = useState(false);
+  const [prizeModalOpen, setPrizeModalOpen] = useState(false);
 
   useEffect(() => {
     axiosInstance
@@ -232,248 +270,276 @@ export default function UploadCertificateScreen({navigation}: any) {
   const selectedCat = categories.find(c => c._id === categoryId);
   const prizeLevels = ['Participation', 'First', 'Second', 'Third'];
 
+  const catItems = [
+    ...categories.map(c => ({label: c.name, value: c._id})),
+    {label: 'Others', value: '__others__'},
+  ];
+  const subItems = subcategories.map((s: any) => ({label: s.name, value: s.name}));
+  const levelItems = currentSub?.levels?.map((l: any) => ({label: l.name, value: l.name})) || [];
+  const prizeItems = prizeLevels.map(p => ({label: p, value: p}));
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled">
-      <Text style={styles.pageTitle}>Upload Certificate</Text>
+    // FIX: SafeAreaView + StatusBar so content is not hidden under notch/status bar on Android
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f0f4ff" />
 
-      {/* Search */}
-      <Text style={styles.label}>Search Certificate Type</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Search by name, category…"
-        placeholderTextColor="#9ca3af"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
+      {/* FIX: Modal-based dropdowns — rendered above the scroll view so they don't block scrolling */}
+      <DropdownModal
+        visible={catModalOpen}
+        title="Select Category"
+        items={catItems}
+        selectedValue={categoryId}
+        onSelect={v => {
+          if (v === '__others__') { activateOthers(); }
+          else { setCategoryId(v); setIsOthers(false); }
+        }}
+        onClose={() => setCatModalOpen(false)}
       />
-      {showDropdown && (
-        <View style={styles.dropdown}>
-          {searchResults.map((item, i) => (
-            <TouchableOpacity
-              key={i}
-              style={styles.dropdownItem}
-              onPress={() => selectSearchResult(item)}>
-              <Text style={styles.dropdownMain}>{item.subcategoryName}</Text>
-              <Text style={styles.dropdownSub}>{item.categoryName}</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.dropdownItem} onPress={activateOthers}>
-            <Text style={styles.dropdownMain}>Others</Text>
-            <Text style={styles.dropdownSub}>Certificate not listed above</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <DropdownModal
+        visible={subModalOpen}
+        title="Select Subcategory"
+        items={subItems}
+        selectedValue={subcategoryName}
+        onSelect={v => setSubcategoryName(v)}
+        onClose={() => setSubModalOpen(false)}
+      />
+      <DropdownModal
+        visible={levelModalOpen}
+        title="Select Level"
+        items={levelItems}
+        selectedValue={levelSelected}
+        onSelect={v => setLevelSelected(v)}
+        onClose={() => setLevelModalOpen(false)}
+      />
+      <DropdownModal
+        visible={prizeModalOpen}
+        title="Select Prize Type"
+        items={prizeItems}
+        selectedValue={prizeType}
+        onSelect={v => setPrizeType(v)}
+        onClose={() => setPrizeModalOpen(false)}
+      />
 
-      {/* Others mode */}
-      {isOthers ? (
-        <View style={styles.othersBox}>
-          <View style={styles.othersHeader}>
-            <Text style={styles.othersLabel}>📎 Others</Text>
-            <TouchableOpacity
-              onPress={() => {setIsOthers(false); setOthersDescription('');}}>
-              <Text style={styles.clearText}>✕ Clear</Text>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled">
+        <Text style={styles.pageTitle}>Upload Certificate</Text>
+
+        {/* Search */}
+        <Text style={styles.label}>Search Certificate Type</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Search by name, category…"
+          placeholderTextColor="#9ca3af"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {showDropdown && (
+          <View style={styles.dropdown}>
+            {searchResults.map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.dropdownItem}
+                onPress={() => selectSearchResult(item)}>
+                <Text style={styles.dropdownMain}>{item.subcategoryName}</Text>
+                <Text style={styles.dropdownSub}>{item.categoryName}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.dropdownItem} onPress={activateOthers}>
+              <Text style={styles.dropdownMain}>Others</Text>
+              <Text style={styles.dropdownSub}>Certificate not listed above</Text>
             </TouchableOpacity>
           </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Describe the certificate (e.g. Blood Donation 2024)"
-            placeholderTextColor="#9ca3af"
-            value={othersDescription}
-            onChangeText={setOthersDescription}
-          />
-        </View>
-      ) : (
-        <>
-          {/* Category picker */}
-          <Text style={styles.label}>Category</Text>
-          <TouchableOpacity
-            style={styles.selector}
-            onPress={() => {setCatOpen(!catOpen); setSubOpen(false); setLevelOpen(false); setPrizeOpen(false);}}>
-            <Text style={selectedCat ? styles.selectorText : styles.selectorPH}>
-              {selectedCat ? selectedCat.name : 'Select category'}
-            </Text>
-            <Text style={styles.chevron}>{catOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-          {catOpen && (
-            <View style={styles.dropdownList}>
-              {categories.map(c => (
-                <TouchableOpacity
-                  key={c._id}
-                  style={[styles.dropdownItem, categoryId === c._id && styles.dropdownItemActive]}
-                  onPress={() => {setCategoryId(c._id); setCatOpen(false);}}>
-                  <Text style={[styles.dropdownMain, categoryId === c._id && styles.dropdownActive]}>
-                    {c.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={styles.dropdownItem} onPress={() => {activateOthers(); setCatOpen(false);}}>
-                <Text style={styles.dropdownMain}>Others</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Subcategory */}
-          {subcategories.length > 0 && (
-            <>
-              <Text style={styles.label}>Subcategory</Text>
-              <TouchableOpacity
-                style={styles.selector}
-                onPress={() => {setSubOpen(!subOpen); setCatOpen(false); setLevelOpen(false); setPrizeOpen(false);}}>
-                <Text style={subcategoryName ? styles.selectorText : styles.selectorPH}>
-                  {subcategoryName || 'Select subcategory'}
-                </Text>
-                <Text style={styles.chevron}>{subOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {subOpen && (
-                <View style={styles.dropdownList}>
-                  {subcategories.map(s => (
-                    <TouchableOpacity
-                      key={s.name}
-                      style={[styles.dropdownItem, subcategoryName === s.name && styles.dropdownItemActive]}
-                      onPress={() => {setSubcategoryName(s.name); setSubOpen(false);}}>
-                      <Text style={[styles.dropdownMain, subcategoryName === s.name && styles.dropdownActive]}>
-                        {s.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
-
-          {/* Level */}
-          {hasLevels && (
-            <>
-              <Text style={styles.label}>Level</Text>
-              <TouchableOpacity
-                style={styles.selector}
-                onPress={() => {setLevelOpen(!levelOpen); setCatOpen(false); setSubOpen(false); setPrizeOpen(false);}}>
-                <Text style={levelSelected ? styles.selectorText : styles.selectorPH}>
-                  {levelSelected || 'Select level'}
-                </Text>
-                <Text style={styles.chevron}>{levelOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {levelOpen && (
-                <View style={styles.dropdownList}>
-                  {currentSub.levels.map((l: any) => (
-                    <TouchableOpacity
-                      key={l.name}
-                      style={[styles.dropdownItem, levelSelected === l.name && styles.dropdownItemActive]}
-                      onPress={() => {setLevelSelected(l.name); setLevelOpen(false);}}>
-                      <Text style={[styles.dropdownMain, levelSelected === l.name && styles.dropdownActive]}>
-                        {l.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
-
-          {/* Prize */}
-          {hasLevels && (
-            <>
-              <Text style={styles.label}>Prize Type</Text>
-              <TouchableOpacity
-                style={styles.selector}
-                onPress={() => {setPrizeOpen(!prizeOpen); setCatOpen(false); setSubOpen(false); setLevelOpen(false);}}>
-                <Text style={prizeType ? styles.selectorText : styles.selectorPH}>
-                  {prizeType || 'Select prize type'}
-                </Text>
-                <Text style={styles.chevron}>{prizeOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {prizeOpen && (
-                <View style={styles.dropdownList}>
-                  {prizeLevels.map(p => (
-                    <TouchableOpacity
-                      key={p}
-                      style={[styles.dropdownItem, prizeType === p && styles.dropdownItemActive]}
-                      onPress={() => {setPrizeType(p); setPrizeOpen(false);}}>
-                      <Text style={[styles.dropdownMain, prizeType === p && styles.dropdownActive]}>{p}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
-
-          {/* Event Name */}
-          {subcategoryName && (
-            <>
-              <Text style={styles.label}>Event / Competition Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. NPTEL Python 2024, Hackathon MTI"
-                placeholderTextColor="#9ca3af"
-                value={eventName}
-                onChangeText={setEventName}
-                maxLength={120}
-              />
-            </>
-          )}
-
-          {/* Eligible Points */}
-          {eligiblePoints !== null && (
-            <View style={styles.eligibleBox}>
-              <Text style={styles.eligibleText}>🏅 Eligible Points: {eligiblePoints}</Text>
-              <Text style={styles.eligibleNote}>*Final points will be approved by tutor</Text>
-            </View>
-          )}
-        </>
-      )}
-
-      {/* Dates */}
-      <Text style={styles.label}>📅 Certificate Date / Activity Duration</Text>
-      <View style={styles.dateRow}>
-        <View style={styles.dateField}>
-          <Text style={styles.dateLabel}>From / Date</Text>
-          <TextInput
-            style={[styles.input, styles.dateInput]}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#9ca3af"
-            value={dateFrom}
-            onChangeText={setDateFrom}
-          />
-        </View>
-        <View style={styles.dateField}>
-          <Text style={styles.dateLabel}>To (optional)</Text>
-          <TextInput
-            style={[styles.input, styles.dateInput]}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#9ca3af"
-            value={dateTo}
-            onChangeText={setDateTo}
-          />
-        </View>
-      </View>
-
-      {/* File Picker */}
-      <TouchableOpacity style={styles.filePicker} onPress={handlePickFile}>
-        <Text style={styles.filePickerText}>
-          {uploadedFile
-            ? `📎 ${uploadedFile.fileName || 'File selected'} (${((uploadedFile.fileSize || 0) / 1024 / 1024).toFixed(2)} MB)`
-            : `📎 Choose File (Max ${MAX_FILE_SIZE_MB} MB)`}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Submit */}
-      <TouchableOpacity
-        style={[styles.submitBtn, !canSubmit && styles.submitDisabled]}
-        onPress={handleSubmit}
-        disabled={!canSubmit}>
-        {uploading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitText}>Submit Certificate</Text>
         )}
-      </TouchableOpacity>
-    </ScrollView>
+
+        {/* Others mode */}
+        {isOthers ? (
+          <View style={styles.othersBox}>
+            <View style={styles.othersHeader}>
+              <Text style={styles.othersLabel}>📎 Others</Text>
+              <TouchableOpacity
+                onPress={() => {setIsOthers(false); setOthersDescription('');}}>
+                <Text style={styles.clearText}>✕ Clear</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Describe the certificate (e.g. Blood Donation 2024)"
+              placeholderTextColor="#9ca3af"
+              value={othersDescription}
+              onChangeText={setOthersDescription}
+            />
+          </View>
+        ) : (
+          <>
+            {/* Category picker — opens Modal, no inline expand that blocks scroll */}
+            <Text style={styles.label}>Category</Text>
+            <TouchableOpacity
+              style={styles.selector}
+              onPress={() => setCatModalOpen(true)}>
+              <Text style={selectedCat ? styles.selectorText : styles.selectorPH}>
+                {selectedCat ? selectedCat.name : 'Select category'}
+              </Text>
+              <Text style={styles.chevron}>▼</Text>
+            </TouchableOpacity>
+
+            {/* Subcategory */}
+            {subcategories.length > 0 && (
+              <>
+                <Text style={styles.label}>Subcategory</Text>
+                <TouchableOpacity
+                  style={styles.selector}
+                  onPress={() => setSubModalOpen(true)}>
+                  <Text style={subcategoryName ? styles.selectorText : styles.selectorPH}>
+                    {subcategoryName || 'Select subcategory'}
+                  </Text>
+                  <Text style={styles.chevron}>▼</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Level */}
+            {hasLevels && (
+              <>
+                <Text style={styles.label}>Level</Text>
+                <TouchableOpacity
+                  style={styles.selector}
+                  onPress={() => setLevelModalOpen(true)}>
+                  <Text style={levelSelected ? styles.selectorText : styles.selectorPH}>
+                    {levelSelected || 'Select level'}
+                  </Text>
+                  <Text style={styles.chevron}>▼</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Prize */}
+            {hasLevels && (
+              <>
+                <Text style={styles.label}>Prize Type</Text>
+                <TouchableOpacity
+                  style={styles.selector}
+                  onPress={() => setPrizeModalOpen(true)}>
+                  <Text style={prizeType ? styles.selectorText : styles.selectorPH}>
+                    {prizeType || 'Select prize type'}
+                  </Text>
+                  <Text style={styles.chevron}>▼</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {/* Event Name */}
+            {subcategoryName && (
+              <>
+                <Text style={styles.label}>Event / Competition Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. NPTEL Python 2024, Hackathon MTI"
+                  placeholderTextColor="#9ca3af"
+                  value={eventName}
+                  onChangeText={setEventName}
+                  maxLength={120}
+                />
+              </>
+            )}
+
+            {/* Eligible Points */}
+            {eligiblePoints !== null && (
+              <View style={styles.eligibleBox}>
+                <Text style={styles.eligibleText}>🏅 Eligible Points: {eligiblePoints}</Text>
+                <Text style={styles.eligibleNote}>*Final points will be approved by tutor</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Dates */}
+        <Text style={styles.label}>📅 Certificate Date / Activity Duration</Text>
+        <View style={styles.dateRow}>
+          <View style={styles.dateField}>
+            <Text style={styles.dateLabel}>From / Date</Text>
+            <TextInput
+              style={[styles.input, styles.dateInput]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#9ca3af"
+              value={dateFrom}
+              onChangeText={setDateFrom}
+            />
+          </View>
+          <View style={styles.dateField}>
+            <Text style={styles.dateLabel}>To (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.dateInput]}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#9ca3af"
+              value={dateTo}
+              onChangeText={setDateTo}
+            />
+          </View>
+        </View>
+
+        {/* File Picker */}
+        <TouchableOpacity style={styles.filePicker} onPress={handlePickFile}>
+          <Text style={styles.filePickerText}>
+            {uploadedFile
+              ? `📎 ${uploadedFile.fileName || 'File selected'} (${((uploadedFile.fileSize || 0) / 1024 / 1024).toFixed(2)} MB)`
+              : `📎 Choose File (Max ${MAX_FILE_SIZE_MB} MB)`}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[styles.submitBtn, !canSubmit && styles.submitDisabled]}
+          onPress={handleSubmit}
+          disabled={!canSubmit}>
+          {uploading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitText}>Submit Certificate</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+// ── Modal dropdown styles ──────────────────────────────────────────────────
+const dm = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: Platform.OS === 'android' ? 24 : 8, // FIX: account for Android nav bar
+  },
+  sheetTitle: {
+    fontSize: 16, fontWeight: '700', color: '#1e3a8a',
+    padding: 18, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+  },
+  item: {
+    paddingHorizontal: 18, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#f9fafb',
+  },
+  itemActive: {backgroundColor: '#eff6ff'},
+  itemText: {fontSize: 15, color: '#374151', fontWeight: '500'},
+  itemTextActive: {color: '#1e3a8a', fontWeight: '700'},
+  cancelBtn: {
+    margin: 12, padding: 14, borderRadius: 12,
+    backgroundColor: '#f3f4f6', alignItems: 'center',
+  },
+  cancelText: {fontSize: 15, color: '#374151', fontWeight: '600'},
+});
+
 const styles = StyleSheet.create({
+  // FIX: wrap everything in SafeAreaView so content clears the status bar & notch on Android
+  safeArea: {flex: 1, backgroundColor: '#f0f4ff'},
   container: {flex: 1, backgroundColor: '#f0f4ff'},
   content: {padding: 20, paddingBottom: 120},
   pageTitle: {fontSize: 22, fontWeight: '800', color: '#1e3a8a', marginBottom: 20},
@@ -485,25 +551,20 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 12, marginTop: 4, zIndex: 10,
+    borderRadius: 12, marginTop: 4,
   },
-  dropdownList: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 12, marginTop: 4, maxHeight: 220, overflow: 'hidden',
-  },
-  dropdownItem: {paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6'},
-  dropdownItemActive: {backgroundColor: '#eff6ff'},
+  dropdownItem: {paddingHorizontal: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6'},
   dropdownMain: {fontSize: 15, color: '#374151', fontWeight: '500'},
-  dropdownActive: {color: '#1e3a8a', fontWeight: '700'},
   dropdownSub: {fontSize: 12, color: '#6b7280', marginTop: 2},
   selector: {
     backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14, // FIX: taller touch target (was 12)
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    minHeight: 52, // FIX: ensure minimum touch target size for Android
   },
-  selectorText: {fontSize: 15, color: '#111827'},
-  selectorPH: {fontSize: 15, color: '#9ca3af'},
-  chevron: {color: '#6b7280', fontSize: 12},
+  selectorText: {fontSize: 15, color: '#111827', flex: 1},
+  selectorPH: {fontSize: 15, color: '#9ca3af', flex: 1},
+  chevron: {color: '#6b7280', fontSize: 14, marginLeft: 8},
   othersBox: {
     backgroundColor: '#eff6ff', borderRadius: 12, padding: 14, marginTop: 10,
     borderWidth: 1.5, borderColor: '#bfdbfe',
@@ -523,13 +584,13 @@ const styles = StyleSheet.create({
   dateInput: {fontSize: 13},
   filePicker: {
     backgroundColor: '#fff', borderWidth: 2, borderColor: '#3b82f6',
-    borderStyle: 'dashed', borderRadius: 12, padding: 16, alignItems: 'center',
+    borderStyle: 'dashed', borderRadius: 12, padding: 18, alignItems: 'center',
     marginTop: 16,
   },
   filePickerText: {color: '#2563eb', fontSize: 14, fontWeight: '600', textAlign: 'center'},
   submitBtn: {
-    backgroundColor: '#1e3a8a', borderRadius: 12, paddingVertical: 16,
-    alignItems: 'center', marginTop: 24,
+    backgroundColor: '#1e3a8a', borderRadius: 12, paddingVertical: 18,
+    alignItems: 'center', marginTop: 24, minHeight: 56, // FIX: bigger touch target
   },
   submitDisabled: {opacity: 0.4},
   submitText: {color: '#fff', fontWeight: '700', fontSize: 16},
@@ -541,8 +602,8 @@ const styles = StyleSheet.create({
   successTitle: {fontSize: 24, fontWeight: '800', color: '#065f46', textAlign: 'center'},
   successSub: {fontSize: 15, color: '#047857', textAlign: 'center', marginTop: 10, lineHeight: 22},
   successBtn: {
-    backgroundColor: '#059669', borderRadius: 12, paddingVertical: 14,
-    paddingHorizontal: 28, marginTop: 28,
+    backgroundColor: '#059669', borderRadius: 12, paddingVertical: 16,
+    paddingHorizontal: 28, marginTop: 28, minHeight: 56,
   },
   successBtnText: {color: '#fff', fontWeight: '700', fontSize: 16},
 });

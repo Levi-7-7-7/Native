@@ -1,4 +1,49 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# ActivityPointsNative — Activity Points Management System (Mobile)
+
+A React Native mobile app mirroring the web app (`activity-points-frontend`) for **student** users.
+
+## Features
+- Student Login (register number + password, first-time OTP flow)
+- Verify OTP — set password, batch, branch, lateral-entry on first login  
+- Forgot Password — email-based reset
+- Dashboard — points card, progress bar, pass badge, recent activities
+- Upload Certificate — category/subcategory/level/prize form + file picker
+- My Certificates — filter by status, view, cancel pending
+
+## Quick Setup
+
+**1. Set your backend URL** in `src/api/axiosInstance.ts`:
+```ts
+export const BASE_URL = 'https://your-backend.onrender.com/api';
+```
+
+**2. Install deps:**
+```bash
+npm install
+cd ios && pod install && cd ..  # iOS only
+```
+
+**3. Run:**
+```bash
+npx react-native run-android   # Android
+npx react-native run-ios       # iOS
+```
+
+## New Dependencies Added
+- `axios` — HTTP client
+- `@react-native-async-storage/async-storage` — replaces localStorage
+- `@react-navigation/native` + `native-stack` + `bottom-tabs`
+- `react-native-screens` — navigation performance
+- `react-native-image-picker` — certificate file picker
+
+## Permissions Required
+**Android** (`AndroidManifest.xml`): `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE`  
+**iOS** (`Info.plist`): `NSPhotoLibraryUsageDescription`
+
+---
+
+Original React Native README below:
+
 
 # Getting Started
 
