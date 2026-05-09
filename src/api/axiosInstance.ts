@@ -2,11 +2,19 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Change this to your backend URL
-export const BASE_URL = 'https://your-backend.onrender.com/api';
+export const BASE_URL = 'https://final-project-backend-ucwn.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
 });
+
+
+
 
 axiosInstance.interceptors.request.use(async config => {
   const token = await AsyncStorage.getItem('token');
