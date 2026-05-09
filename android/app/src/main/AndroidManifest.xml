@@ -2,6 +2,23 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--
+      Android 11+ (API 30) requires apps to declare which URL schemes they
+      intend to query via Linking.canOpenURL / Linking.openURL.
+      Without this, canOpenURL returns false for https:// even when a browser
+      is installed, which broke the View / Download button.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+    </queries>
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
