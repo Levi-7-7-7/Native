@@ -6,7 +6,7 @@ export const BASE_URL = 'https://final-project-backend-ucwn.onrender.com/api';
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
