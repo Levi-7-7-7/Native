@@ -5,6 +5,7 @@ import {useAuth} from '../context/AuthContext';
 import LoginScreen from '../screens/LoginScreen';
 import VerifyOtpScreen from '../screens/VerifyOtpScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import StudentTabNavigator from './StudentTabNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -28,11 +29,8 @@ export default function RootNavigator() {
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="VerifyOtp" component={VerifyOtpScreen} />
-          <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-            options={{headerShown: true, title: 'Forgot Password', headerBackTitle: 'Back'}}
-          />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
         </>
       )}
     </Stack.Navigator>

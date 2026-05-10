@@ -4,6 +4,7 @@ import {
   ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axiosInstance from '../api/axiosInstance';
 import {useAuth} from '../context/AuthContext';
 
@@ -13,6 +14,9 @@ export default function VerifyOtpScreen({route}: any) {
 
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [batchId, setBatchId] = useState('');
   const [branchId, setBranchId] = useState('');
   const [batches, setBatches] = useState<any[]>([]);
@@ -33,8 +37,16 @@ export default function VerifyOtpScreen({route}: any) {
   }, []);
 
   const handleSubmit = async () => {
-    if (!otp || !password || !batchId || !branchId) {
+    if (!otp || !password || !confirmPassword || !batchId || !branchId) {
       Alert.alert('Error', 'All fields are required');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
     setLoading(true);
@@ -50,7 +62,6 @@ export default function VerifyOtpScreen({route}: any) {
       await AsyncStorage.setItem('token', res.data.token);
       await AsyncStorage.setItem('role', 'student');
       setRole('student');
-      // fetch user info
       const me = await axiosInstance.get('/students/me');
       setUser(me.data);
     } catch (err: any) {
@@ -66,11 +77,18 @@ export default function VerifyOtpScreen({route}: any) {
   const selectedBatch = batches.find(b => b._id === batchId);
   const selectedBranch = branches.find(b => b._id === branchId);
 
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled={true}>
+
         <View style={styles.header}>
           <Text style={styles.emoji}>📧</Text>
           <Text style={styles.title}>Verify OTP</Text>
@@ -79,6 +97,7 @@ export default function VerifyOtpScreen({route}: any) {
         </View>
 
         <View style={styles.card}>
+          {/* OTP */}
           <Text style={styles.label}>OTP Code</Text>
           <TextInput
             style={styles.input}
@@ -91,39 +110,95 @@ export default function VerifyOtpScreen({route}: any) {
             editable={!loading}
           />
 
+          {/* Password */}
           <Text style={styles.label}>Set Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Set a password for future logins"
-            placeholderTextColor="#9ca3af"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!loading}
-          />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.inputFlex}
+              placeholder="Set a password for future logins"
+              placeholderTextColor="#9ca3af"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword(v => !v)}>
+              <Icon
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#6b7280"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Confirm Password */}
+          <Text style={styles.label}>Confirm Password</Text>
+          <View style={[
+            styles.inputRow,
+            passwordsMatch && styles.inputRowSuccess,
+            passwordsMismatch && styles.inputRowError,
+          ]}>
+            <TextInput
+              style={styles.inputFlex}
+              placeholder="Re-enter your password"
+              placeholderTextColor="#9ca3af"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowConfirmPassword(v => !v)}>
+              <Icon
+                name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#6b7280"
+              />
+            </TouchableOpacity>
+            {passwordsMatch && (
+              <Icon name="check-circle" size={20} color="#16a34a" style={styles.statusIcon} />
+            )}
+            {passwordsMismatch && (
+              <Icon name="close-circle" size={20} color="#dc2626" style={styles.statusIcon} />
+            )}
+          </View>
+          {passwordsMismatch && (
+            <Text style={styles.errorText}>Passwords do not match</Text>
+          )}
 
           {/* Batch selector */}
           <Text style={styles.label}>Batch</Text>
           <TouchableOpacity
             style={styles.selector}
-            onPress={() => {setBatchOpen(!batchOpen); setBranchOpen(false);}}>
+            onPress={() => {setBatchOpen(v => !v); setBranchOpen(false);}}>
             <Text style={selectedBatch ? styles.selectorText : styles.selectorPlaceholder}>
               {selectedBatch ? selectedBatch.name : 'Select Batch'}
             </Text>
-            <Text style={styles.chevron}>{batchOpen ? '▲' : '▼'}</Text>
+            <Icon name={batchOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#6b7280" />
           </TouchableOpacity>
           {batchOpen && (
             <View style={styles.dropdown}>
-              {batches.map(b => (
-                <TouchableOpacity
-                  key={b._id}
-                  style={[styles.dropdownItem, batchId === b._id && styles.dropdownItemActive]}
-                  onPress={() => {setBatchId(b._id); setBatchOpen(false);}}>
-                  <Text style={[styles.dropdownText, batchId === b._id && styles.dropdownTextActive]}>
-                    {b.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                style={styles.dropdownScroll}>
+                {batches.map(b => (
+                  <TouchableOpacity
+                    key={b._id}
+                    style={[styles.dropdownItem, batchId === b._id && styles.dropdownItemActive]}
+                    onPress={() => {setBatchId(b._id); setBatchOpen(false);}}>
+                    <Text style={[styles.dropdownText, batchId === b._id && styles.dropdownTextActive]}>
+                      {b.name}
+                    </Text>
+                    {batchId === b._id && (
+                      <Icon name="check" size={16} color="#1e3a8a" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -131,24 +206,32 @@ export default function VerifyOtpScreen({route}: any) {
           <Text style={styles.label}>Branch</Text>
           <TouchableOpacity
             style={styles.selector}
-            onPress={() => {setBranchOpen(!branchOpen); setBatchOpen(false);}}>
+            onPress={() => {setBranchOpen(v => !v); setBatchOpen(false);}}>
             <Text style={selectedBranch ? styles.selectorText : styles.selectorPlaceholder}>
               {selectedBranch ? selectedBranch.name : 'Select Branch'}
             </Text>
-            <Text style={styles.chevron}>{branchOpen ? '▲' : '▼'}</Text>
+            <Icon name={branchOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#6b7280" />
           </TouchableOpacity>
           {branchOpen && (
             <View style={styles.dropdown}>
-              {branches.map(b => (
-                <TouchableOpacity
-                  key={b._id}
-                  style={[styles.dropdownItem, branchId === b._id && styles.dropdownItemActive]}
-                  onPress={() => {setBranchId(b._id); setBranchOpen(false);}}>
-                  <Text style={[styles.dropdownText, branchId === b._id && styles.dropdownTextActive]}>
-                    {b.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <ScrollView
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                style={styles.dropdownScroll}>
+                {branches.map(b => (
+                  <TouchableOpacity
+                    key={b._id}
+                    style={[styles.dropdownItem, branchId === b._id && styles.dropdownItemActive]}
+                    onPress={() => {setBranchId(b._id); setBranchOpen(false);}}>
+                    <Text style={[styles.dropdownText, branchId === b._id && styles.dropdownTextActive]}>
+                      {b.name}
+                    </Text>
+                    {branchId === b._id && (
+                      <Icon name="check" size={16} color="#1e3a8a" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -158,7 +241,7 @@ export default function VerifyOtpScreen({route}: any) {
             onPress={() => setIsLateralEntry(!isLateralEntry)}
             disabled={loading}>
             <View style={[styles.checkbox, isLateralEntry && styles.checkboxChecked]}>
-              {isLateralEntry && <Text style={styles.checkmark}>✓</Text>}
+              {isLateralEntry && <Icon name="check" size={13} color="#fff" />}
             </View>
             <Text style={styles.checkLabel}>
               I am a <Text style={{fontWeight: '700'}}>Lateral Entry</Text> student{' '}
@@ -167,9 +250,9 @@ export default function VerifyOtpScreen({route}: any) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.btnPrimary, loading && styles.btnDisabled]}
+            style={[styles.btnPrimary, (loading || passwordsMismatch) && styles.btnDisabled]}
             onPress={handleSubmit}
-            disabled={loading}>
+            disabled={loading || passwordsMismatch}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
@@ -184,7 +267,7 @@ export default function VerifyOtpScreen({route}: any) {
 
 const styles = StyleSheet.create({
   flex: {flex: 1, backgroundColor: '#f0f4ff'},
-  container: {flexGrow: 1, justifyContent: 'center', padding: 20},
+  container: {flexGrow: 1, padding: 20, paddingTop: 40, paddingBottom: 40},
   header: {alignItems: 'center', marginBottom: 24},
   emoji: {fontSize: 48, marginBottom: 8},
   title: {fontSize: 24, fontWeight: '800', color: '#1e3a8a'},
@@ -204,6 +287,17 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 15, color: '#111827',
   },
+  inputRow: {
+    backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#e5e7eb',
+    borderRadius: 12, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14,
+  },
+  inputRowSuccess: {borderColor: '#16a34a'},
+  inputRowError: {borderColor: '#dc2626'},
+  inputFlex: {flex: 1, paddingVertical: 12, fontSize: 15, color: '#111827'},
+  eyeBtn: {padding: 4},
+  statusIcon: {marginLeft: 4},
+  errorText: {color: '#dc2626', fontSize: 12, marginTop: 4, marginLeft: 2},
   selector: {
     backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#e5e7eb',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
@@ -211,23 +305,28 @@ const styles = StyleSheet.create({
   },
   selectorText: {fontSize: 15, color: '#111827'},
   selectorPlaceholder: {fontSize: 15, color: '#9ca3af'},
-  chevron: {color: '#6b7280', fontSize: 12},
   dropdown: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e5e7eb',
-    borderRadius: 12, marginTop: 4, maxHeight: 200, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12,
+    marginTop: 4, backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08, shadowRadius: 6, elevation: 4,
   },
-  dropdownItem: {paddingHorizontal: 14, paddingVertical: 12},
+  dropdownScroll: {maxHeight: 180},
+  dropdownItem: {
+    paddingHorizontal: 14, paddingVertical: 13,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+  },
   dropdownItemActive: {backgroundColor: '#eff6ff'},
   dropdownText: {fontSize: 15, color: '#374151'},
   dropdownTextActive: {color: '#1e3a8a', fontWeight: '600'},
-  checkRow: {flexDirection: 'row', alignItems: 'center', marginTop: 14},
+  checkRow: {flexDirection: 'row', alignItems: 'center', marginTop: 16},
   checkbox: {
     width: 20, height: 20, borderRadius: 5,
     borderWidth: 1.5, borderColor: '#9ca3af',
     alignItems: 'center', justifyContent: 'center', marginRight: 8,
   },
   checkboxChecked: {backgroundColor: '#1e3a8a', borderColor: '#1e3a8a'},
-  checkmark: {color: '#fff', fontSize: 13, fontWeight: '700'},
   checkLabel: {flex: 1, fontSize: 14, color: '#374151'},
   btnPrimary: {
     backgroundColor: '#1e3a8a', borderRadius: 12, paddingVertical: 14,
