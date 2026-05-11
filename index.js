@@ -21,13 +21,13 @@ notifee.onBackgroundEvent(async ({ type, detail }) => {
 // Handles FCM data-only messages when app is background or killed.
 // (Notification messages are shown automatically by FCM; this is for data messages.)
 messaging().setBackgroundMessageHandler(async remoteMessage => {
-  const status = remoteMessage.data?.status;
-  const title = remoteMessage.notification?.title || 'Certificate Update';
-  const body  = remoteMessage.notification?.body  || '';
-  if (status === 'approved' || status === 'rejected') {
-    await setupNotifications();
-    await showCertificateNotification({ title, body, status });
-  }
+//   const status = remoteMessage.data?.status;
+//   const title = remoteMessage.notification?.title || 'Certificate Update';
+//   const body  = remoteMessage.notification?.body  || '';
+//   if (status === 'approved' || status === 'rejected') {
+//     await setupNotifications();
+//     await showCertificateNotification({ title, body, status });
+//   }
 });
 // ─────────────────────────────────────────────────────────────────────────────
 

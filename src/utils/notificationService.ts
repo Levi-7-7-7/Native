@@ -16,8 +16,8 @@ import notifee, {
 
 export const CHANNEL_ID = 'certificate_status';
 
-export async function setupNotifications(): Promise<void> {
-  // Create the Android notification channel (idempotent — safe to call every launch)
+// Only creates the channel — safe to call from headless/background context
+export async function setupNotificationChannel(): Promise<void> {
   await notifee.createChannel({
     id: CHANNEL_ID,
     name: 'Certificate Status',
@@ -27,8 +27,11 @@ export async function setupNotifications(): Promise<void> {
     vibration: true,
     lights: true,
   });
+}
 
-  // Request permission — needed for iOS and Android 13+
+// Requests permission — must only be called when UI is available (NOT from index.js)
+export async function setupNotifications(): Promise<void> {
+  await setupNotificationChannel();
   const settings = await notifee.requestPermission();
   if (settings.authorizationStatus < AuthorizationStatus.AUTHORIZED) {
     console.warn('[Notifications] Permission not granted');
