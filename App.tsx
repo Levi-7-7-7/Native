@@ -1,56 +1,65 @@
 /**
  * App.tsx
  *
- * FIX 1 — Notification tap (foreground)
- *   Added notifee.onForegroundEvent() listener. Without this, tapping a
- *   notification while the app IS open does nothing visible.
+ * Notification tap handling — three cases:
  *
- * FIX 2 — Notification tap (background / quit state)
- *   notifee.onBackgroundEvent() at module level handles taps when backgrounded.
- *   notifee.getInitialNotification() handles taps when app was fully closed.
- *   Both navigate to the Certificates tab.
+ * 1. App OPEN (foreground):
+ *    notifee.onForegroundEvent() fires → navigate to Certificates tab.
+ *
+ * 2. App BACKGROUNDED — user taps FCM notification:
+ *    messaging().onNotificationOpenedApp() fires → navigate to Certificates.
+ *
+ * 3. App KILLED — user taps FCM notification to cold-start:
+ *    messaging().getInitialNotification() resolves with the notification
+ *    → navigate after a short delay for the navigator to mount.
+ *
+ * Note: notifee.onBackgroundEvent() is only needed if you display Notifee
+ * notifications in the background (we don't — FCM handles that natively).
+ * It's kept here as a required no-op because Notifee throws without it.
  */
 import React, {useEffect, useRef} from 'react';
 import {StatusBar} from 'react-native';
 import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import notifee, {EventType} from '@notifee/react-native';
+import messaging from '@react-native-firebase/messaging';
 import {AuthProvider} from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
-import {setupNotifications} from './src/utils/notificationService';
 
-// MUST be at module level (outside component) — runs in headless JS task
-notifee.onBackgroundEvent(async ({type}) => {
-  if (type === EventType.PRESS) {
-    // launchActivity already opens the app — nothing more needed here
-  }
-});
+// Required by Notifee — must be at module level
+notifee.onBackgroundEvent(async () => {});
 
 export default function App() {
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
+  const goToCertificates = () => {
+    navigationRef.current?.navigate('StudentApp', {screen: 'Certificates'});
+  };
+
   useEffect(() => {
-    setupNotifications().catch(err =>
-      console.warn('[App] Notification setup failed:', err),
-    );
-
-    // Foreground: app is open, user taps notification
-    const unsubscribe = notifee.onForegroundEvent(({type}) => {
+    // Case 1: Notifee local notification tapped while app is open
+    const unsubNotifee = notifee.onForegroundEvent(({type}) => {
       if (type === EventType.PRESS) {
-        navigationRef.current?.navigate('StudentApp', {screen: 'Certificates'});
+        goToCertificates();
       }
     });
 
-    // Quit state: app was fully closed, user tapped notification
-    notifee.getInitialNotification().then(initial => {
-      if (initial) {
-        setTimeout(() => {
-          navigationRef.current?.navigate('StudentApp', {screen: 'Certificates'});
-        }, 500);
+    // Case 2: FCM notification tapped while app was backgrounded
+    const unsubFcm = messaging().onNotificationOpenedApp(() => {
+      goToCertificates();
+    });
+
+    // Case 3: FCM notification tapped to open app from killed state
+    messaging().getInitialNotification().then(remoteMessage => {
+      if (remoteMessage) {
+        setTimeout(goToCertificates, 500);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubNotifee();
+      unsubFcm();
+    };
   }, []);
 
   return (

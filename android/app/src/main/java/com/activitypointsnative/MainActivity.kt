@@ -3,6 +3,7 @@ package com.activitypointsnative
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -21,12 +22,9 @@ class MainActivity : ReactActivity() {
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    // installSplashScreen() MUST be called before super.onCreate()
     val splashScreen = installSplashScreen()
-
     super.onCreate(savedInstanceState)
 
-    // Custom exit animation (Android 12+ only)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
         val splashScreenView = splashScreenViewProvider.view
@@ -60,5 +58,16 @@ class MainActivity : ReactActivity() {
         }
       }
     }
+  }
+
+  /**
+   * onNewIntent is called when the activity is already running (singleTask)
+   * and receives a new intent — e.g. the user taps a notification while the
+   * app is backgrounded. Without this override, React Native never sees the
+   * intent and the JS notification tap handler never fires.
+   */
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 }

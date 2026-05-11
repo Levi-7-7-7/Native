@@ -8,11 +8,6 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
-
-    <!--
-      Android 13+ (API 33): POST_NOTIFICATIONS is a runtime permission.
-      Without this the user is never asked and no notifications appear.
-    -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
@@ -45,25 +40,26 @@
         android:theme="@style/SplashTheme"
         android:exported="true">
 
-        <!-- App launcher -->
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
 
-        <!--
-          Notification tap handler.
-          When the user taps a Notifee notification, this intent-filter
-          brings MainActivity to the foreground (singleTask reuses the
-          existing instance — no splash screen re-run, no glitch).
-          The action name must match the pressAction.id used in
-          notificationService.ts ("default").
-        -->
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.DEFAULT" />
-        </intent-filter>
-
       </activity>
+
+      <!--
+        FCM background message handler.
+        react-native-firebase auto-handles data-only FCM messages in the
+        background/killed state via this service.
+        Without this declaration, FCM messages are DROPPED when app is closed.
+      -->
+      <service
+        android:name="io.invertase.firebase.messaging.ReactNativeFirebaseMessagingService"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="com.google.firebase.MESSAGING_EVENT" />
+        </intent-filter>
+      </service>
+
     </application>
 </manifest>
