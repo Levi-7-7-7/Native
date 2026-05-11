@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "280486727174",
+    "project_id": "activitypoints-bc7ec",
+    "storage_bucket": "activitypoints-bc7ec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280486727174:android:4e9c12843d6d93919bfd87",
+        "android_client_info": {
+          "package_name": "com.activitypointsnative"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgmbVMkp3KnUT3sUF71vaa-P4Da0gUbQc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
