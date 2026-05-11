@@ -26,8 +26,8 @@ import messaging from '@react-native-firebase/messaging';
 import {AuthProvider} from './src/context/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
 
-// Required by Notifee — must be at module level
-notifee.onBackgroundEvent(async () => {});
+// // Required by Notifee — must be at module level
+// notifee.onBackgroundEvent(async () => {});
 
 export default function App() {
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
