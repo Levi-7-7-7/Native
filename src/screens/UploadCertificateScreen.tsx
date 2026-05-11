@@ -239,7 +239,93 @@ export default function UploadCertificateScreen({navigation}: any) {
     setOthersDescription('');
   };
 
-  // Validates that the picked asset is an image or PDF, then stores it.
+  // ── Permission helpers ────────────────────────────────────────────────────
+
+  /**
+   * Requests READ_MEDIA_IMAGES (API 33+) or READ_EXTERNAL_STORAGE (API ≤ 32).
+   * Returns true if permission is already granted or was just granted.
+   * Shows a Settings nudge if permanently denied.
+   */
+  const requestMediaPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
+    const permission =
+      Platform.Version >= 33
+        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+
+    // Already granted — skip dialog
+    const already = await PermissionsAndroid.check(permission);
+    if (already) return true;
+
+    const result = await PermissionsAndroid.request(permission, {
+      title: 'Photos & Media Permission',
+      message:
+        'This app needs access to your photos and media to attach certificate images.',
+      buttonPositive: 'Allow',
+      buttonNegative: 'Deny',
+      buttonNeutral: 'Ask Later',
+    });
+
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return true;
+
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      Alert.alert(
+        'Permission Blocked',
+        'Photos & Media access was permanently denied.\n\nGo to Settings → Apps → ActivityPoints → Permissions and enable "Photos & Media".',
+        [{text: 'OK'}],
+      );
+    } else {
+      Alert.alert(
+        'Permission Required',
+        'Photos & Media access is needed to pick a certificate image.',
+      );
+    }
+    return false;
+  };
+
+  /**
+   * Requests CAMERA permission.
+   * Returns true if already granted or just granted.
+   * Shows a Settings nudge if permanently denied.
+   */
+  const requestCameraPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
+
+    const already = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+    );
+    if (already) return true;
+
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.CAMERA,
+      {
+        title: 'Camera Permission',
+        message:
+          'This app needs camera access to photograph your certificate.',
+        buttonPositive: 'Allow',
+        buttonNegative: 'Deny',
+        buttonNeutral: 'Ask Later',
+      },
+    );
+
+    if (result === PermissionsAndroid.RESULTS.GRANTED) return true;
+
+    if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+      Alert.alert(
+        'Permission Blocked',
+        'Camera access was permanently denied.\n\nGo to Settings → Apps → ActivityPoints → Permissions and enable "Camera".',
+        [{text: 'OK'}],
+      );
+    } else {
+      Alert.alert(
+        'Permission Required',
+        'Camera access is required to take a photo of your certificate.',
+      );
+    }
+    return false;
+  };
+
+  // ── Validates that the picked asset is an image or PDF, then stores it ──
   const validateAndSet = (asset: any) => {
     if ((asset.fileSize || 0) > MAX_FILE_SIZE_MB * 1024 * 1024) {
       Alert.alert('File too large', `File must be under ${MAX_FILE_SIZE_MB} MB.`);
@@ -260,6 +346,8 @@ export default function UploadCertificateScreen({navigation}: any) {
   };
 
   const pickFromGallery = async () => {
+    const ok = await requestMediaPermission();
+    if (!ok) return;
     const result = await launchImageLibrary({
       mediaType: 'photo',   // images only — PDFs handled separately via DocumentPicker
       quality: 0.85,
@@ -309,20 +397,8 @@ export default function UploadCertificateScreen({navigation}: any) {
   };
 
   const pickFromCamera = async () => {
-    if (Platform.OS === 'android') {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        {
-          title: 'Camera Permission',
-          message: 'This app needs camera access to photograph your certificate.',
-          buttonPositive: 'Allow',
-        },
-      );
-      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert('Permission denied', 'Camera access is required to take a photo.');
-        return;
-      }
-    }
+    const ok = await requestCameraPermission();
+    if (!ok) return;
     const result = await launchCamera({
       mediaType: 'photo',
       quality: 0.85,
