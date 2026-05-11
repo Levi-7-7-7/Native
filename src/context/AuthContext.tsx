@@ -30,13 +30,28 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
             : 'adminToken';
         const token = await AsyncStorage.getItem(tokenKey);
 
-        if (token && storedRole === 'student') {
-          const res = await axiosInstance.get('/students/me');
-          setUser(res.data);
-          setRole('student');
-        } else if (storedRole) {
-          setRole(storedRole);
-        }
+        // In the init() function inside AuthContext
+  if (token && storedRole === 'student') {
+    try {
+      const res = await axiosInstance.get('/students/me');
+      setUser(res.data);
+      setRole('student');
+    } catch (err: any) {
+      // Only log out on 401 Unauthorized — not on network errors
+      if (err?.response?.status === 401) {
+        await AsyncStorage.multiRemove([
+          'token', 'tutorToken', 'adminToken', 'role',
+          'userName', 'tutorName', 'userData',
+        ]);
+      } else {
+        // Network error — still set the role so the app opens
+        setRole('student');
+      }
+    }
+  } else if (storedRole) {
+    setRole(storedRole);
+  }
+
       } catch {
         await AsyncStorage.multiRemove([
           'token', 'tutorToken', 'adminToken', 'role',

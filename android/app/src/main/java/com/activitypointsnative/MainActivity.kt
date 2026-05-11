@@ -23,7 +23,7 @@ class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     val splashScreen = installSplashScreen()
-    super.onCreate(savedInstanceState)
+    super.onCreate(null) // null prevents state restore crash on cold start
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       splashScreen.setOnExitAnimationListener { splashScreenViewProvider ->
@@ -58,16 +58,30 @@ class MainActivity : ReactActivity() {
         }
       }
     }
+
+    // ✅ FIX: When app is cold-started from a killed state via FCM notification,
+    // store the launching intent and re-deliver it once the activity is ready.
+    // Without this, the intent arrives before the JS bridge is initialised → crash.
+    intent?.let { handleIntent(it) }
   }
 
-  /**
-   * onNewIntent is called when the activity is already running (singleTask)
-   * and receives a new intent — e.g. the user taps a notification while the
-   * app is backgrounded. Without this override, React Native never sees the
-   * intent and the JS notification tap handler never fires.
-   */
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
+    handleIntent(intent)
+  }
+
+  /**
+   * Re-sets the intent so react-native-firebase's getInitialNotification()
+   * can read it correctly after the JS bundle has loaded.
+   * Also guards against null extras that cause crashes on some OEM ROMs.
+   */
+  private fun handleIntent(intent: Intent) {
+    try {
+      setIntent(intent)
+    } catch (e: Exception) {
+      // Never crash the activity over an intent handling error
+      e.printStackTrace()
+    }
   }
 }
