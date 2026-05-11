@@ -1,6 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Camera — required for launchCamera() in react-native-image-picker -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Storage write — needed for Downloads on Android 9 and below -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <!-- Storage read for picking files (Android 9 and below) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!--
       Android 11+ (API 30) requires apps to declare which URL schemes they

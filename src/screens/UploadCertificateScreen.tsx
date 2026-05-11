@@ -8,7 +8,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import axiosInstance from '../api/axiosInstance';
 import {useTheme, Colors} from '../theme';
 
@@ -235,19 +235,69 @@ export default function UploadCertificateScreen({navigation}: any) {
     setOthersDescription('');
   };
 
-  const handlePickFile = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'mixed',
-      quality: 0.8,
-      selectionLimit: 1,
-    });
-    if (result.didCancel || !result.assets?.length) return;
-    const asset = result.assets[0];
+  // Validates that the picked asset is an image or PDF, then stores it.
+  const validateAndSet = (asset: any) => {
     if ((asset.fileSize || 0) > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      Alert.alert('Error', `File must be under ${MAX_FILE_SIZE_MB} MB`);
+      Alert.alert('File too large', `File must be under ${MAX_FILE_SIZE_MB} MB.`);
+      return;
+    }
+    const mime: string = (asset.type || '').toLowerCase();
+    const name: string = (asset.fileName || '').toLowerCase();
+    const isImage = mime.startsWith('image/');
+    const isPdf = mime === 'application/pdf' || name.endsWith('.pdf');
+    if (!isImage && !isPdf) {
+      Alert.alert(
+        'Unsupported file type',
+        'Only images (JPG, PNG, etc.) and PDF files are accepted as certificates.',
+      );
       return;
     }
     setUploadedFile(asset);
+  };
+
+  const pickFromGallery = async () => {
+    // mediaType: 'mixed' on react-native-image-picker v8 allows picking
+    // PDFs from the document picker on Android, and images + PDFs on iOS.
+    const result = await launchImageLibrary({
+      mediaType: 'mixed',
+      quality: 0.85,
+      selectionLimit: 1,
+      presentationStyle: 'pageSheet',
+    });
+    if (result.didCancel || !result.assets?.length) return;
+    validateAndSet(result.assets[0]);
+  };
+
+  const pickFromCamera = async () => {
+    const result = await launchCamera({
+      mediaType: 'photo',
+      quality: 0.85,
+      saveToPhotos: false,
+    });
+    if (result.didCancel || !result.assets?.length) return;
+    validateAndSet(result.assets[0]);
+  };
+
+  const handlePickFile = () => {
+    Alert.alert(
+      'Attach Certificate',
+      'Choose how to attach your certificate.',
+      [
+        {
+          text: '📷  Take Photo',
+          onPress: pickFromCamera,
+        },
+        {
+          text: '🖼️  Choose Image / PDF',
+          onPress: pickFromGallery,
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      {cancelable: true},
+    );
   };
 
   const currentSub =
@@ -582,7 +632,7 @@ export default function UploadCertificateScreen({navigation}: any) {
           <Text style={[styles.filePickerText, {color: uploadedFile ? colors.primary : '#2563eb'}]}>
             {uploadedFile
               ? `📎 ${uploadedFile.fileName || 'File selected'} (${((uploadedFile.fileSize || 0) / 1024 / 1024).toFixed(2)} MB)`
-              : `📎 Choose File (Max ${MAX_FILE_SIZE_MB} MB)`}
+              : `📎 Attach Certificate — Image, PDF or Camera\n(Max ${MAX_FILE_SIZE_MB} MB)`}
           </Text>
         </TouchableOpacity>
 
