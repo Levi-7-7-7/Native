@@ -31,28 +31,37 @@ import RootNavigator from './src/navigation/RootNavigator';
 
 export default function App() {
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
+  const notificationPending = useRef(false); // store intent
 
   const goToCertificates = () => {
-    navigationRef.current?.navigate('StudentApp', {screen: 'Certificates'});
+    if (!navigationRef.current?.isReady()) {
+      notificationPending.current = true;
+      return;
+    }
+  const currentRoute = navigationRef.current.getCurrentRoute()?.name;
+    // Only navigate if we're already inside the student stack
+    if (currentRoute && currentRoute !== 'Login' && currentRoute !== 'VerifyOtp') {
+      try {
+        navigationRef.current.navigate('StudentApp', { screen: 'Certificates' });
+      } catch (e) {
+        console.warn('[Nav] Navigate failed:', e);
+      }
+    }
   };
 
   useEffect(() => {
-    // Case 1: Notifee local notification tapped while app is open
-    const unsubNotifee = notifee.onForegroundEvent(({type}) => {
-      if (type === EventType.PRESS) {
-        goToCertificates();
-      }
+    const unsubNotifee = notifee.onForegroundEvent(({ type }) => {
+      if (type === EventType.PRESS) goToCertificates();
     });
 
-    // Case 2: FCM notification tapped while app was backgrounded
     const unsubFcm = messaging().onNotificationOpenedApp(() => {
       goToCertificates();
     });
 
-    // Case 3: FCM notification tapped to open app from killed state
+    // Cold start — store intent, navigate when navigator is ready
     messaging().getInitialNotification().then(remoteMessage => {
       if (remoteMessage) {
-        setTimeout(goToCertificates, 500);
+        notificationPending.current = true;
       }
     });
 
@@ -66,10 +75,18 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#f0f4ff" />
       <AuthProvider>
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            // ✅ Navigator is mounted — now safe to navigate
+            if (notificationPending.current) {
+              notificationPending.current = false;
+              goToCertificates();
+            }
+          }}>
           <RootNavigator />
         </NavigationContainer>
       </AuthProvider>
     </SafeAreaProvider>
   );
-}
+} 
