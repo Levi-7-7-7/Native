@@ -9,7 +9,7 @@
     <!-- Storage read for picking files (Android 9 and below) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
-
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />    
     <!--
       Android 11+ (API 30) requires apps to declare which URL schemes they
       intend to query via Linking.canOpenURL / Linking.openURL.

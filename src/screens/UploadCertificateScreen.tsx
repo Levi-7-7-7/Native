@@ -2,13 +2,17 @@ import React, {useState, useEffect} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, Platform, Modal,
-  FlatList, StatusBar,
+  FlatList, StatusBar, PermissionsAndroid,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {
+  pick,
+  types,
+} from '@react-native-documents/picker';
 import axiosInstance from '../api/axiosInstance';
 import {useTheme, Colors} from '../theme';
 
@@ -256,10 +260,8 @@ export default function UploadCertificateScreen({navigation}: any) {
   };
 
   const pickFromGallery = async () => {
-    // mediaType: 'mixed' on react-native-image-picker v8 allows picking
-    // PDFs from the document picker on Android, and images + PDFs on iOS.
     const result = await launchImageLibrary({
-      mediaType: 'mixed',
+      mediaType: 'photo',   // images only — PDFs handled separately via DocumentPicker
       quality: 0.85,
       selectionLimit: 1,
       presentationStyle: 'pageSheet',
@@ -268,7 +270,59 @@ export default function UploadCertificateScreen({navigation}: any) {
     validateAndSet(result.assets[0]);
   };
 
+  const pickPdf = async () => {
+    try {
+      const results = await pick({
+        type: [types.pdf],
+        allowMultiSelection: false,
+      });
+
+      if (!results || results.length === 0) {
+        return;
+      }
+
+      const file = results[0];
+
+      validateAndSet({
+        uri: file.uri,
+        type: file.type || 'application/pdf',
+        fileName: file.name || 'document.pdf',
+        fileSize: file.size || 0,
+      });
+
+    } catch (err: any) {
+      console.log('PDF PICKER ERROR:', err);
+
+      // User cancelled
+      if (
+        err?.code === 'DOCUMENT_PICKER_CANCELED' ||
+        err?.message?.toLowerCase().includes('cancel')
+      ) {
+        return;
+      }
+
+      Alert.alert(
+        'PDF Error',
+        'Unable to open PDF picker. Please try again.',
+      );
+    }
+  };
+
   const pickFromCamera = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.CAMERA,
+        {
+          title: 'Camera Permission',
+          message: 'This app needs camera access to photograph your certificate.',
+          buttonPositive: 'Allow',
+        },
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('Permission denied', 'Camera access is required to take a photo.');
+        return;
+      }
+    }
     const result = await launchCamera({
       mediaType: 'photo',
       quality: 0.85,
@@ -288,8 +342,12 @@ export default function UploadCertificateScreen({navigation}: any) {
           onPress: pickFromCamera,
         },
         {
-          text: '🖼️  Choose Image / PDF',
+          text: '🖼️  Choose Image',
           onPress: pickFromGallery,
+        },
+        {
+          text: '📄  Choose PDF',
+          onPress: pickPdf,
         },
         {
           text: 'Cancel',

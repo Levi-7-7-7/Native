@@ -89,32 +89,47 @@ export default function CertificateViewerScreen({route, navigation}: any) {
     try {
       const ext = type === 'pdf' ? '.pdf' : type === 'image' ? '.jpg' : '';
       const safeName = (fileName || 'certificate').replace(/[^a-zA-Z0-9_\-\.]/g, '_') + ext;
+      const mime = type === 'pdf' ? 'application/pdf' : 'image/jpeg';
 
-      let destPath: string;
       if (Platform.OS === 'android') {
-        destPath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/${safeName}`;
+        const folderPath = `${ReactNativeBlobUtil.fs.dirs.DownloadDir}/Activity Point Certificates`;
+
+        // Create the subfolder if it doesn't exist yet
+        const folderExists = await ReactNativeBlobUtil.fs.isDir(folderPath);
+        if (!folderExists) {
+          await ReactNativeBlobUtil.fs.mkdir(folderPath);
+        }
+
+        const destPath = `${folderPath}/${safeName}`;
+
+        await ReactNativeBlobUtil.config({
+          path: destPath,           // no fileCache:true — that overrides path and sends to cache
+          addAndroidDownloads: {
+            useDownloadManager: true,
+            notification: true,
+            title: safeName,
+            description: 'Activity Point Certificate',
+            mime,
+            mediaScannable: true,   // makes file appear in Files app immediately
+            path: destPath,         // Download Manager also needs path here
+          },
+        }).fetch('GET', fileUrl);
+
+        Alert.alert(
+          'Downloaded ✓',
+          `Saved to:\nDownloads › Activity Point Certificates › ${safeName}`,
+        );
       } else {
-        destPath = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/${safeName}`;
+        // iOS — save to Documents
+        const destPath = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/Activity Point Certificates/${safeName}`;
+        const folderPath = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/Activity Point Certificates`;
+        const folderExists = await ReactNativeBlobUtil.fs.isDir(folderPath);
+        if (!folderExists) {
+          await ReactNativeBlobUtil.fs.mkdir(folderPath);
+        }
+        await ReactNativeBlobUtil.config({path: destPath}).fetch('GET', fileUrl);
+        Alert.alert('Downloaded ✓', `Saved to Files › Activity Point Certificates › ${safeName}`);
       }
-
-      await ReactNativeBlobUtil.config({
-        fileCache: true,
-        path: destPath,
-        addAndroidDownloads: {
-          useDownloadManager: true,
-          notification: true,
-          title: safeName,
-          description: 'Certificate downloaded',
-          mime: type === 'pdf' ? 'application/pdf' : 'image/jpeg',
-        },
-      }).fetch('GET', fileUrl);
-
-      Alert.alert(
-        'Downloaded',
-        Platform.OS === 'android'
-          ? `Saved to Downloads as "${safeName}".`
-          : `Saved to Files as "${safeName}".`,
-      );
     } catch (err: any) {
       Alert.alert('Download failed', err?.message || 'Please try again.');
     } finally {
